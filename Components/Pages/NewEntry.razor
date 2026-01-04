@@ -1,0 +1,266 @@
+@page "/new-entry"
+@page "/edit-entry/{Id:int}"
+@using JUpdate.Models
+@using JUpdate.Services
+@using JUpdate.Components.Controls
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+
+<div class="page-container">
+    <div class="page-header">
+        <button class="icon-btn" @onclick="NavigateBack">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5m0 0l7 7m-7-7l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <h1>@(Id.HasValue ? "Edit Entry" : "New Entry")</h1>
+        <div class="header-actions">
+            @if (!Id.HasValue || entry.IsDraft)
+            {
+                <button class="btn btn-secondary" @onclick="() => SaveEntry(true)">Save Draft</button>
+            }
+            <button class="btn btn-primary" @onclick="() => SaveEntry(false)">Save</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="background-color: #ffebee; color: #c62828; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+            @errorMessage
+        </div>
+    }
+
+    <div class="entry-form">
+        <!-- Date Picker -->
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" class="form-control" @bind="entry.EntryDate" />
+        </div>
+
+        <!-- Mood Selection -->
+        <div class="form-group">
+            <label>How are you feeling?</label>
+            <div class="mood-selector">
+                @foreach (var mood in moods)
+                {
+                    <button class="mood-item @(entry.PrimaryMoodId == mood.Id ? "selected" : "")" 
+                            @onclick="() => entry.PrimaryMoodId = mood.Id"
+                            title="@mood.Name">
+                        <span class="mood-emoji">@mood.Emoji</span>
+                        <span class="mood-name">@mood.Name</span>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Title -->
+        <div class="form-group">
+            <input type="text" class="title-input" placeholder="Title (optional)" @bind="entry.Title" />
+        </div>
+
+        <!-- Tags -->
+        <div class="form-group">
+            <label>Tags</label>
+            <TagInput Tags="tagList" TagsChanged="UpdateTags" />
+        </div>
+
+        <!-- Content Editor -->
+        <div class="editor-container">
+            <MarkdownEditor @bind-Value="entry.Content" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private JournalEntry entry = new() { EntryDate = DateTime.Today, PrimaryMoodId = 1 }; // Default to Happy
+    private List<Mood> moods = new();
+    private List<string> tagList = new();
+    private string? errorMessage;
+
+    protected override void OnInitialized()
+    {
+        moods = JournalService.GetMoods();
+        
+        if (Id.HasValue)
+        {
+            var existing = JournalService.GetAllEntries().FirstOrDefault(e => e.Id == Id.Value);
+            if (existing != null)
+            {
+                entry = existing;
+                if (!string.IsNullOrEmpty(entry.Tags))
+                {
+                    tagList = entry.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToList();
+                }
+            }
+        }
+    }
+
+    private void UpdateTags(List<string> newTags)
+    {
+        tagList = newTags;
+        entry.Tags = string.Join(",", tagList);
+    }
+
+    private void SaveEntry(bool isDraft)
+    {
+        try
+        {
+            entry.IsDraft = isDraft;
+            JournalService.SaveEntry(entry);
+            Navigation.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving entry: {ex.Message}";
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/dashboard");
+    }
+}
+
+<style>
+    .page-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 16px;
+        background: var(--bg-primary, #f7fafc);
+        color: var(--text-primary, #2d3748);
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 24px;
+        gap: 16px;
+    }
+
+    .page-header h1 {
+        flex: 1;
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        color: var(--text-secondary, #718096);
+        border-radius: 50%;
+    }
+
+    .icon-btn:hover {
+        background: var(--bg-hover, #edf2f7);
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        border: none;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background: var(--primary-color, #3182ce);
+        color: white;
+    }
+
+    .btn-secondary {
+        background: var(--bg-hover, #edf2f7);
+        color: var(--text-primary, #2d3748);
+    }
+
+    .entry-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-secondary, #718096);
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 8px;
+        font-size: 16px;
+    }
+
+    .title-input {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-bottom: 2px solid var(--border-color, #e2e8f0);
+        font-size: 20px;
+        font-weight: 600;
+        background: transparent;
+        outline: none;
+    }
+
+    .title-input:focus {
+        border-bottom-color: var(--primary-color, #3182ce);
+    }
+
+    .mood-selector {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+    }
+
+    .mood-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        background: white;
+        cursor: pointer;
+        min-width: 64px;
+    }
+
+    .mood-item.selected {
+        border-color: var(--primary-color, #3182ce);
+        background: var(--primary-light, #ebf8ff);
+    }
+
+    .mood-emoji {
+        font-size: 24px;
+    }
+
+    .mood-name {
+        font-size: 12px;
+        color: var(--text-secondary, #718096);
+    }
+
+    .editor-container {
+        flex: 1;
+        min-height: 300px;
+    }
+</style>

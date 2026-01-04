@@ -1,0 +1,192 @@
+@page "/login"
+@page "/"
+@layout JUpdate.Components.Layout.LoginLayout
+@inject JUpdate.Services.AuthService AuthService
+@inject JUpdate.Services.DatabaseService DbService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="login-container">
+    <div class="login-content">
+        <!-- Header Section -->
+        <div class="login-header">
+            <div class="app-icon">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="48" height="48" rx="8" fill="#7C917C"/>
+                    <path d="M14 16h20v2H14v-2zm0 4h20v2H14v-2zm0 4h14v2H14v-2z" fill="white"/>
+                </svg>
+            </div>
+            <h1 class="app-title">Journal</h1>
+            <p class="app-tagline">Your private thoughts, secured</p>
+        </div>
+
+        <!-- PIN Input Section -->
+        <div class="pin-section" @onclick="FocusPinInput">
+            <label class="pin-label">Enter your PIN</label>
+            
+            <!-- PIN Visual Dots -->
+            <div class="pin-dots" @onclick="FocusPinInput">
+                @for (int i = 0; i < 6; i++)
+                {
+                    <div class="pin-dot @(i < pinInput.Length ? "filled" : "")"></div>
+                }
+            </div>
+
+            <!-- PIN Input (visually hidden but functional) -->
+            <input type="tel" 
+                   inputmode="numeric"
+                   pattern="[0-9]*"
+                   class="pin-input-hidden" 
+                   value="@pinInput"
+                   @oninput="HandleInput"
+                   maxlength="6"
+                   @onkeypress="HandleKeyPress"
+                   @ref="pinInputRef"
+                   tabindex="0"/>
+        </div>
+
+        <!-- Error Message -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message">@errorMessage</div>
+        }
+
+        <!-- Action Button -->
+        <button class="unlock-button" @onclick="HandleUnlock" disabled="@(pinInput.Length != 6)">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 9V6a5 5 0 0 1 10 0v3M10 13v2M5 9h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Unlock Journal
+        </button>
+
+        <!-- Forgot PIN Link -->
+        <a href="#" class="forgot-pin-link" @onclick="HandleForgotPin" @onclick:preventDefault>Forgot PIN?</a>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 1L2 4v3c0 3.31 2.69 6 6 6s6-2.69 6-6V4l-6-3zM8 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#A0AEC0"/>
+            </svg>
+            <span>Your data is encrypted and secure</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string pinInput = string.Empty;
+    private string? errorMessage = string.Empty;
+    private ElementReference pinInputRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Check if PIN is set, if not, redirect to PIN setup
+            try 
+            {
+                if (!AuthService.HasPin())
+                {
+                    Navigation.NavigateTo("/pin-setup");
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Auth Check Error: {ex.Message}";
+                StateHasChanged();
+            }
+            
+            // Focus the PIN input after render
+            try
+            {
+                await pinInputRef.FocusAsync();
+            }
+            catch { }
+        }
+    }
+
+    private async Task FocusPinInput()
+    {
+        try
+        {
+            await Task.Delay(10); // Small delay to ensure DOM is ready
+            await pinInputRef.FocusAsync();
+            await Task.Delay(10);
+            StateHasChanged(); // Force UI update
+        }
+        catch (Exception ex)
+        {
+            // Try alternative method if FocusAsync fails
+            Console.WriteLine($"Focus error: {ex.Message}");
+        }
+    }
+
+    private void HandleInput(ChangeEventArgs e)
+    {
+        // Filter to only allow digits
+        var input = e.Value?.ToString() ?? string.Empty;
+        var filtered = new string(input.Where(char.IsDigit).Take(6).ToArray());
+        pinInput = filtered;
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && pinInput.Length == 6)
+        {
+            await HandleUnlock();
+        }
+    }
+
+    private async Task HandleUnlock()
+    {
+        if (pinInput.Length != 6)
+            return;
+
+        errorMessage = string.Empty;
+        StateHasChanged();
+        
+        // Simulating async work if needed
+        await Task.Yield(); 
+
+        try
+        {
+            // Verify the PIN
+            if (AuthService.VerifyPin(pinInput))
+            {
+                AuthService.SetAuthenticated(true);
+                Navigation.NavigateTo("/dashboard");
+            }
+            else
+            {
+                errorMessage = "Incorrect PIN. Please try again.";
+                pinInput = string.Empty;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Login Error: {ex.GetType().Name} - {ex.Message}";
+            Console.WriteLine(ex);
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleForgotPin()
+    {
+        try
+        {
+            bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Forgetting your PIN will reset the app security. Your journal entries will remain safe, but you will need to create a new PIN. Continue?");
+            if (confirmed)
+            {
+                DbService.ClearUserPin();
+                Navigation.NavigateTo("/pin-setup", forceLoad: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+    }
+}
+

@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+<div class="login-layout">
+    <main class="login-content-wrapper">
+        @Body
+    </main>
+</div>
+
+<style>
+    .login-layout {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background-color: #f7fafc; /* Always light background */
+        color: #2d3748; /* Always dark text */
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+
+    .login-content-wrapper {
+        width: 100%;
+        max-width: 100%;
+    }
+</style>

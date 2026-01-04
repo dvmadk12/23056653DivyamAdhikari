@@ -1,0 +1,231 @@
+@page "/entry/{Id:int}"
+@using JUpdate.Models
+@using JUpdate.Services
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="page-container">
+    @if (entry == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="page-header">
+            <button class="icon-btn" @onclick="NavigateBack">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 12H5m0 0l7 7m-7-7l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+            <div class="header-actions">
+                <button class="icon-btn" @onclick="EditEntry" title="Edit">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                </button>
+                <button class="icon-btn delete-btn" @onclick="DeleteEntry" title="Delete">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="entry-content-wrapper">
+            <div class="entry-meta">
+                <div class="date-mood">
+                    <span class="entry-date">@entry.EntryDate.ToString("MMMM dd, yyyy")</span>
+                    @if (currentMood != null)
+                    {
+                        <span class="entry-mood" title="@currentMood.Name">@currentMood.Emoji @currentMood.Name</span>
+                    }
+                </div>
+                @if (entry.IsDraft)
+                {
+                    <span class="draft-badge">DRAFT</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrEmpty(entry.Title))
+            {
+                <h1 class="entry-title">@entry.Title</h1>
+            }
+
+            @if (!string.IsNullOrEmpty(entry.Tags))
+            {
+                <div class="entry-tags">
+                    @foreach (var tag in entry.Tags.Split(','))
+                    {
+                        <span class="tag-chip">#@tag.Trim()</span>
+                    }
+                </div>
+            }
+
+            <div class="entry-body">
+                @((MarkupString)RenderMarkdown(entry.Content))
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private JournalEntry? entry;
+    private Mood? currentMood;
+
+    protected override void OnInitialized()
+    {
+        LoadEntry();
+    }
+
+    private void LoadEntry()
+    {
+        var entries = JournalService.GetAllEntries();
+        entry = entries.FirstOrDefault(e => e.Id == Id);
+        
+        if (entry != null)
+        {
+            var moods = JournalService.GetMoods();
+            currentMood = moods.FirstOrDefault(m => m.Id == entry.PrimaryMoodId);
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo("/dashboard");
+    }
+
+    private void EditEntry()
+    {
+        Navigation.NavigateTo($"/edit-entry/{Id}");
+    }
+
+    private async Task DeleteEntry()
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this entry?");
+        if (confirmed)
+        {
+            JournalService.DeleteEntry(Id);
+            Navigation.NavigateTo("/dashboard");
+        }
+    }
+
+    private string RenderMarkdown(string? markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return string.Empty;
+        // Basic rendering
+        return markdown.Replace("\n", "<br/>");
+    }
+}
+
+<style>
+    .page-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 16px;
+        background: var(--bg-surface, white);
+        color: var(--text-primary, #2d3748);
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        color: var(--text-secondary, #718096);
+        border-radius: 50%;
+    }
+
+    .icon-btn:hover {
+        background: var(--bg-hover, #edf2f7);
+    }
+
+    .delete-btn:hover {
+        color: #e53e3e;
+        background: #fff5f5;
+    }
+
+    .entry-content-wrapper {
+        flex: 1;
+        overflow-y: auto;
+        padding-bottom: 32px;
+    }
+
+    .entry-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .date-mood {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        color: var(--text-secondary, #718096);
+    }
+
+    .entry-mood {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 8px;
+        background: var(--bg-secondary, #f7fafc);
+        border-radius: 12px;
+    }
+
+    .draft-badge {
+        background: #fbd38d;
+        color: #744210;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .entry-title {
+        font-size: 28px;
+        font-weight: 700;
+        margin: 0 0 16px 0;
+        color: var(--text-primary, #2d3748);
+    }
+
+    .entry-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .tag-chip {
+        color: var(--primary-color, #3182ce);
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .entry-body {
+        font-size: 16px;
+        line-height: 1.6;
+        color: var(--text-primary, #2d3748);
+    }
+</style>

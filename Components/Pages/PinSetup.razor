@@ -1,0 +1,176 @@
+@page "/pin-setup"
+@layout JUpdate.Components.Layout.LoginLayout
+@inject JUpdate.Services.AuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="login-container">
+    <div class="login-content">
+        <!-- Header Section -->
+        <div class="login-header">
+            <div class="app-icon">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="48" height="48" rx="8" fill="#7C917C"/>
+                    <path d="M14 16h20v2H14v-2zm0 4h20v2H14v-2zm0 4h14v2H14v-2z" fill="white"/>
+                </svg>
+            </div>
+            <h1 class="app-title">Journal</h1>
+            <p class="app-tagline">Set up your PIN to secure your journal</p>
+        </div>
+
+        <!-- PIN Input Section -->
+        <div class="pin-section" @onclick="FocusPinInput" @onclick:preventDefault="false">
+            <label class="pin-label">@(isConfirming ? "Confirm your PIN" : "Create a 6-digit PIN")</label>
+            
+            <!-- PIN Visual Dots -->
+            <div class="pin-dots" @onclick="FocusPinInput">
+                @for (int i = 0; i < 6; i++)
+                {
+                    <div class="pin-dot @(i < pinInput.Length ? "filled" : "")"></div>
+                }
+            </div>
+
+            <!-- PIN Input (visually hidden but functional) -->
+            <input type="tel" 
+                   inputmode="numeric"
+                   pattern="[0-9]*"
+                   class="pin-input-hidden" 
+                   value="@pinInput"
+                   @oninput="HandleInput"
+                   maxlength="6"
+                   @onkeypress="HandleKeyPress"
+                   @ref="pinInputRef"
+                   tabindex="0"/>
+        </div>
+
+        <!-- Error Message -->
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message">@errorMessage</div>
+        }
+
+        <!-- Action Button -->
+        <button class="unlock-button" @onclick="HandleSubmit" disabled="@(pinInput.Length != 6)">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M16 7h1m0 0v1m0-1l-4 4-4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            @(isConfirming ? "Confirm" : "Continue")
+        </button>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 1L2 4v3c0 3.31 2.69 6 6 6s6-2.69 6-6V4l-6-3zM8 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" fill="#A0AEC0"/>
+            </svg>
+            <span>Your data is encrypted and secure</span>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string pinInput = string.Empty;
+    private string firstPin = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isConfirming = false;
+    private ElementReference pinInputRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await pinInputRef.FocusAsync();
+            }
+            catch { }
+        }
+    }
+
+    private async Task FocusPinInput()
+    {
+        try
+        {
+            await pinInputRef.FocusAsync();
+        }
+        catch { }
+    }
+
+    private void HandleInput(ChangeEventArgs e)
+    {
+        // Filter to only allow digits
+        var input = e.Value?.ToString() ?? string.Empty;
+        var filtered = new string(input.Where(char.IsDigit).Take(6).ToArray());
+        pinInput = filtered;
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && pinInput.Length == 6)
+        {
+            await HandleSubmit();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (pinInput.Length != 6)
+            return;
+
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        if (!isConfirming)
+        {
+            // First PIN entry - save it and ask for confirmation
+            firstPin = pinInput;
+            pinInput = string.Empty;
+            isConfirming = true;
+            StateHasChanged();
+            
+            // Focus input again after state change
+            try
+            {
+                await Task.Delay(100);
+                await pinInputRef.FocusAsync();
+            }
+            catch { }
+        }
+        else
+        {
+            // Confirmation - check if PINs match
+            if (pinInput == firstPin)
+            {
+                try 
+                {
+                    // PINs match - save and authenticate
+                    AuthService.SetPin(pinInput);
+                    AuthService.SetAuthenticated(true);
+                    Navigation.NavigateTo("/dashboard");
+                }
+                catch (Exception ex)
+                {
+                     errorMessage = $"Error saving PIN: {ex.Message}";
+                     StateHasChanged();
+                }
+            }
+            else
+            {
+                // PINs don't match - start over
+                errorMessage = "PINs do not match. Please try again.";
+                firstPin = string.Empty;
+                pinInput = string.Empty;
+                isConfirming = false;
+                StateHasChanged();
+                
+                // Focus input again after reset
+                try
+                {
+                    await Task.Delay(100);
+                    await pinInputRef.FocusAsync();
+                }
+                catch { }
+            }
+        }
+    }
+}
+

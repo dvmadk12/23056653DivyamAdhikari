@@ -1,0 +1,254 @@
+@page "/entries"
+@using JUpdate.Models
+@using JUpdate.Services
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+
+<div class="entries-page">
+    <div class="page-header">
+        <h1>All Entries</h1>
+        <p>A complete history of your thoughts</p>
+    </div>
+
+    @if (allEntries == null)
+    {
+        <p>Loading entries...</p>
+    }
+    else if (!allEntries.Any())
+    {
+        <div class="empty-state">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <p>No journal entries yet.</p>
+            <button class="btn-primary" @onclick="CreateNewEntry">Start Writing</button>
+        </div>
+    }
+    else
+    {
+        <div class="entries-timeline">
+            @foreach (var group in groupedEntries)
+            {
+                <div class="month-group">
+                    <h2 class="month-header">@group.Key</h2>
+                    <div class="entries-list">
+                        @foreach (var entry in group.Value)
+                        {
+                            <div class="entry-card" @onclick="() => NavigateToEntry(entry.Id)">
+                                <div class="entry-date-col">
+                                    <span class="day-number">@entry.EntryDate.Day</span>
+                                    <span class="day-name">@entry.EntryDate.ToString("ddd")</span>
+                                </div>
+                                <div class="entry-details">
+                                    <div class="entry-header-row">
+                                        <h3 class="entry-title">@(string.IsNullOrEmpty(entry.Title) ? "Untitled" : entry.Title)</h3>
+                                        <span class="entry-mood">
+                                            @GetMoodEmoji(entry.PrimaryMoodId)
+                                        </span>
+                                    </div>
+                                    <p class="entry-preview">
+                                        @(entry.Content.Length > 120 ? entry.Content.Substring(0, 120) + "..." : entry.Content)
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(entry.Tags))
+                                    {
+                                        <div class="entry-tags">
+                                            @foreach (var tag in entry.Tags.Split(','))
+                                            {
+                                                <span class="tag">#@tag.Trim()</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<JournalEntry> allEntries = new();
+    private Dictionary<string, List<JournalEntry>> groupedEntries = new();
+    private List<Mood> moods = new();
+
+    protected override void OnInitialized()
+    {
+        LoadData();
+    }
+
+    private void LoadData()
+    {
+        allEntries = JournalService.GetAllEntries() ?? new List<JournalEntry>();
+        moods = JournalService.GetMoods();
+
+        // Group by Month Year (e.g., "January 2024")
+        groupedEntries = allEntries
+            .GroupBy(e => e.EntryDate.ToString("MMMM yyyy"))
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
+
+    private void NavigateToEntry(int id)
+    {
+        Navigation.NavigateTo($"/entry/{id}");
+    }
+
+    private void CreateNewEntry()
+    {
+        Navigation.NavigateTo("/new-entry");
+    }
+
+    private string GetMoodEmoji(int moodId)
+    {
+        var mood = moods.FirstOrDefault(m => m.Id == moodId);
+        return mood?.Emoji ?? "📝";
+    }
+}
+
+<style>
+    .entries-page {
+        padding: 24px;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        margin-bottom: 40px;
+    }
+
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+    }
+
+    .page-header p {
+        color: var(--text-secondary);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--text-secondary);
+    }
+
+    .empty-state svg {
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state button {
+        margin-top: 20px;
+    }
+
+    .month-group {
+        margin-bottom: 40px;
+    }
+
+    .month-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-bottom: 16px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border-color);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .entries-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .entry-card {
+        display: flex;
+        gap: 20px;
+        padding: 20px;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .entry-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .entry-date-col {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 50px;
+        padding-right: 20px;
+        border-right: 1px solid var(--border-color);
+    }
+
+    .day-number {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        line-height: 1;
+    }
+
+    .day-name {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        margin-top: 4px;
+        font-weight: 600;
+    }
+
+    .entry-details {
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .entry-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .entry-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .entry-preview {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin-bottom: 12px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .entry-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .tag {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        background: var(--bg-hover);
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+</style>

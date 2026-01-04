@@ -1,0 +1,180 @@
+@using JUpdate.Services
+
+<div class="markdown-editor">
+    <div class="editor-toolbar">
+        <div class="toolbar-group">
+            <button class="toolbar-btn" @onclick='() => InsertMarkdown("**", "**")' title="Bold">
+                <strong>B</strong>
+            </button>
+            <button class="toolbar-btn" @onclick='() => InsertMarkdown("*", "*")' title="Italic">
+                <em>I</em>
+            </button>
+             <button class="toolbar-btn" @onclick='() => InsertMarkdown("~~", "~~")' title="Strikethrough">
+                <span style="text-decoration: line-through">S</span>
+            </button>
+        </div>
+        <div class="toolbar-group">
+            <button class="toolbar-btn" @onclick='() => InsertMarkdown("# ", "")' title="Heading 1">H1</button>
+            <button class="toolbar-btn" @onclick='() => InsertMarkdown("## ", "")' title="Heading 2">H2</button>
+            <button class="toolbar-btn" @onclick='() => InsertMarkdown("- ", "")' title="List">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="toolbar-spacer"></div>
+        <div class="view-toggle">
+            <button class="toggle-btn @(!IsPreview ? "active" : "")" @onclick="() => IsPreview = false">Write</button>
+            <button class="toggle-btn @(IsPreview ? "active" : "")" @onclick="() => IsPreview = true">Preview</button>
+        </div>
+    </div>
+
+    <div class="editor-content">
+        @if (!IsPreview)
+        {
+            <textarea @bind="Value" 
+                      @bind:event="oninput"
+                      @ref="textareaRef"
+                      class="editor-textarea"
+                      placeholder="Write your thoughts here... (Markdown supported)"></textarea>
+        }
+        else
+        {
+            <div class="markdown-preview">
+                @((MarkupString)InternalRenderMarkdown(Value))
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    private bool IsPreview = false;
+    private ElementReference textareaRef;
+
+    private async Task InsertMarkdown(string prefix, string suffix)
+    {
+        // Simple append for now, more complex cursor insertion would require JS interop
+        // Ideally we'd use JS to get cursor position and insert at cursor
+        Value += $"{prefix}{suffix}";
+        await ValueChanged.InvokeAsync(Value);
+    }
+    
+    private string InternalRenderMarkdown(string markdown)
+    {
+        if (string.IsNullOrEmpty(markdown)) return string.Empty;
+        
+        // Very basic markdown rendering for preview
+        // In a real app, use a library like Markdig
+        var html = System.Net.WebUtility.HtmlEncode(markdown)
+            .Replace("\n", "<br/>")
+            .Replace("**", "<b>").Replace("**", "</b>") // Naive replacement
+            .Replace("*", "<i>").Replace("*", "</i>");  // Naive replacement
+            
+        // For now, let's just return the text but preserve newlines
+        // A proper markdown library is recommended
+        return markdown.Replace("\n", "<br/>");
+    }
+}
+
+<style>
+    .markdown-editor {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--bg-surface, white);
+    }
+
+    .editor-toolbar {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        background: var(--bg-secondary, #f7fafc);
+        border-bottom: 1px solid var(--border-color, #e2e8f0);
+        gap: 8px;
+    }
+
+    .toolbar-group {
+        display: flex;
+        gap: 4px;
+        padding-right: 8px;
+        border-right: 1px solid var(--border-color, #e2e8f0);
+    }
+
+    .toolbar-group:last-child {
+        border-right: none;
+    }
+
+    .toolbar-btn {
+        padding: 4px 8px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
+        cursor: pointer;
+        color: var(--text-primary, #2d3748);
+        font-size: 14px;
+    }
+
+    .toolbar-btn:hover {
+        background: var(--bg-hover, #edf2f7);
+    }
+
+    .toolbar-spacer {
+        flex: 1;
+    }
+
+    .view-toggle {
+        display: flex;
+        background: var(--bg-hover, #edf2f7);
+        padding: 2px;
+        border-radius: 6px;
+    }
+
+    .toggle-btn {
+        padding: 4px 12px;
+        border: none;
+        background: transparent;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        color: var(--text-secondary, #718096);
+    }
+
+    .toggle-btn.active {
+        background: white;
+        color: var(--text-primary, #2d3748);
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .editor-content {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .editor-textarea {
+        width: 100%;
+        height: 100%;
+        padding: 16px;
+        border: none;
+        resize: none;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 16px;
+        line-height: 1.6;
+        outline: none;
+        color: var(--text-primary, #2d3748);
+        background: var(--bg-surface, white);
+    }
+
+    .markdown-preview {
+        padding: 16px;
+        height: 100%;
+        overflow-y: auto;
+        color: var(--text-primary, #2d3748);
+    }
+</style>

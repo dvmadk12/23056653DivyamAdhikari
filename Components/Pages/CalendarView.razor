@@ -1,0 +1,340 @@
+@page "/calendar"
+@using JUpdate.Models
+@using JUpdate.Services
+@using System.Globalization
+@inject JournalService JournalService
+@inject NavigationManager Navigation
+
+<div class="calendar-container">
+    <div class="calendar-header">
+        <button class="nav-btn" @onclick="PrevMonth">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        <h2>@currentDate.ToString("MMMM yyyy")</h2>
+        <button class="nav-btn" @onclick="NextMonth">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="weekdays-grid">
+        @foreach (var day in CultureInfo.CurrentCulture.DateTimeFormat.AbbreviatedDayNames)
+        {
+            <div class="weekday">@day.Substring(0, 1)</div>
+        }
+    </div>
+
+    <div class="days-grid">
+        @foreach (var day in calendarDays)
+        {
+            <div class="day-cell @(day.IsCurrentMonth ? "" : "other-month") @(IsToday(day.Date) ? "today" : "")"
+                 @onclick="() => SelectDate(day.Date)">
+                <span class="day-number">@day.Date.Day</span>
+                @if (day.HasEntry)
+                {
+                    <div class="entry-dot"></div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="selected-date-entries">
+        <h3>@selectedDate.ToString("D")</h3>
+        @if (selectedDayEntry != null)
+        {
+            <div class="entry-card" @onclick="() => NavigateToEntry(selectedDayEntry.Id)">
+                <div class="entry-card-header">
+                    <span class="entry-title">@(string.IsNullOrEmpty(selectedDayEntry.Title) ? "Untitled Entry" : selectedDayEntry.Title)</span>
+                    @if (selectedDayEntry.IsDraft)
+                    {
+                        <span class="draft-badge">Draft</span>
+                    }
+                </div>
+                <p class="entry-preview">
+                    @GetPreview(selectedDayEntry.Content)
+                </p>
+                @if (!string.IsNullOrEmpty(selectedDayEntry.Tags))
+                {
+                    <div class="entry-card-tags">
+                        @foreach(var tag in selectedDayEntry.Tags.Split(',').Take(3))
+                        {
+                            <span class="card-tag">#@tag.Trim()</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <p>No entry for this day.</p>
+                <button class="btn btn-primary" @onclick="CreateEntryForSelectedDate">Create Entry</button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private DateTime currentDate = DateTime.Today;
+    private DateTime selectedDate = DateTime.Today;
+    private List<CalendarDay> calendarDays = new();
+    private List<JournalEntry> monthEntries = new();
+    private JournalEntry? selectedDayEntry;
+
+    protected override void OnInitialized()
+    {
+        LoadMonthData();
+        SelectDate(DateTime.Today);
+    }
+
+    private void LoadMonthData()
+    {
+        // Get all entries to map to calendar
+        // Optimization: In real app, filter typically by month range in DB query
+        // For local SQLite, loading all might be okay for MVP, but better to filter
+        var allEntries = JournalService.GetAllEntries(); 
+        
+        monthEntries = allEntries
+            .Where(e => e.EntryDate.Year == currentDate.Year && e.EntryDate.Month == currentDate.Month)
+            .ToList();
+
+        GenerateCalendarDays(allEntries);
+    }
+
+    private void GenerateCalendarDays(List<JournalEntry> allEntries)
+    {
+        calendarDays.Clear();
+        var firstDayOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
+        var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+        
+        // Determine start day (padding from previous month)
+        var startDay = firstDayOfMonth.AddDays(-(int)firstDayOfMonth.DayOfWeek);
+        var endDay = lastDayOfMonth.AddDays(6 - (int)lastDayOfMonth.DayOfWeek);
+
+        for (var date = startDay; date <= endDay; date = date.AddDays(1))
+        {
+            calendarDays.Add(new CalendarDay
+            {
+                Date = date,
+                IsCurrentMonth = date.Month == currentDate.Month,
+                HasEntry = allEntries.Any(e => e.EntryDate.Date == date.Date)
+            });
+        }
+    }
+
+    private void PrevMonth()
+    {
+        currentDate = currentDate.AddMonths(-1);
+        LoadMonthData();
+    }
+
+    private void NextMonth()
+    {
+        currentDate = currentDate.AddMonths(1);
+        LoadMonthData();
+    }
+
+    private void SelectDate(DateTime date)
+    {
+        selectedDate = date;
+        selectedDayEntry = JournalService.GetEntryByDate(selectedDate);
+    }
+
+    private bool IsToday(DateTime date)
+    {
+        return date.Date == DateTime.Today;
+    }
+
+    private void NavigateToEntry(int id)
+    {
+        Navigation.NavigateTo($"/entry/{id}");
+    }
+
+    private void CreateEntryForSelectedDate()
+    {
+        // We'd ideally pass the date to NewEntry page
+        // For now, let's just go to New Entry, user can change date
+        // Or implement query parameter support in NewEntry
+        Navigation.NavigateTo("/new-entry");
+    }
+
+    private string GetPreview(string content)
+    {
+        if (string.IsNullOrEmpty(content)) return "";
+        var plainText = System.Text.RegularExpressions.Regex.Replace(content, "<.*?>", String.Empty);
+        return plainText.Length > 100 ? plainText.Substring(0, 100) + "..." : plainText;
+    }
+
+    class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public bool IsCurrentMonth { get; set; }
+        public bool HasEntry { get; set; }
+    }
+}
+
+<style>
+    .calendar-container {
+        padding: 16px;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg-surface, white);
+        color: var(--text-primary, #2d3748);
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .calendar-header h2 {
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .nav-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: var(--text-secondary, #718096);
+        padding: 8px;
+        border-radius: 50%;
+    }
+
+    .nav-btn:hover {
+        background: var(--bg-hover, #edf2f7);
+    }
+
+    .weekdays-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        text-align: center;
+        margin-bottom: 8px;
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--text-secondary, #718096);
+    }
+
+    .days-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .day-cell {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        cursor: pointer;
+        position: relative;
+        font-size: 14px;
+    }
+
+    .day-cell:hover {
+        background: var(--bg-hover, #edf2f7);
+    }
+
+    .day-cell.other-month {
+        color: var(--text-disabled, #cbd5e0);
+    }
+
+    .day-cell.today {
+        background: var(--primary-light, #ebf8ff);
+        color: var(--primary-color, #3182ce);
+        font-weight: 600;
+    }
+
+    .entry-dot {
+        width: 4px;
+        height: 4px;
+        background: var(--primary-color, #3182ce);
+        border-radius: 50%;
+        margin-top: 2px;
+    }
+
+    .selected-date-entries {
+        flex: 1;
+        border-top: 1px solid var(--border-color, #e2e8f0);
+        padding-top: 16px;
+    }
+
+    .selected-date-entries h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+        color: var(--text-secondary, #718096);
+    }
+
+    .entry-card {
+        background: var(--bg-card, #f7fafc);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color, #e2e8f0);
+        cursor: pointer;
+    }
+
+    .entry-card:hover {
+        border-color: var(--primary-color, #3182ce);
+    }
+
+    .entry-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .entry-title {
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .draft-badge {
+        background: #fbd38d;
+        color: #744210;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+    .entry-preview {
+        font-size: 14px;
+        color: var(--text-secondary, #718096);
+        margin: 0 0 8px 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .entry-card-tags {
+        display: flex;
+        gap: 6px;
+    }
+
+    .card-tag {
+        font-size: 12px;
+        color: var(--primary-color, #3182ce);
+        background: var(--primary-light, #ebf8ff);
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 24px;
+        color: var(--text-secondary, #718096);
+    }
+</style>

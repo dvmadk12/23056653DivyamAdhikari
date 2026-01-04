@@ -1,0 +1,168 @@
+@using JUpdate.Services
+@inject JournalService JournalService
+
+<div class="tag-input-container">
+    <div class="tags-list">
+        @foreach (var tag in Tags)
+        {
+            <span class="tag-chip">
+                #@tag
+                <button class="remove-tag" @onclick="() => RemoveTag(tag)" tabindex="-1">×</button>
+            </span>
+        }
+        <input type="text" 
+               class="tag-input" 
+               placeholder="@(Tags.Count == 0 ? "Add tags..." : "")"
+               @bind="currentInput"
+               @bind:event="oninput"
+               @onkeypress="HandleKeyPress"
+               @onfocusout="AddCurrentInput" />
+    </div>
+    
+    @if (showSuggestions && suggestions.Any())
+    {
+        <div class="suggestions-dropdown">
+            @foreach (var suggestion in suggestions)
+            {
+                <div class="suggestion-item" @onclick="() => SelectSuggestion(suggestion)">
+                    #@suggestion
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<string> Tags { get; set; } = new();
+    [Parameter] public EventCallback<List<string>> TagsChanged { get; set; }
+
+    private string currentInput = "";
+    private List<string> allTags = new();
+    private List<string> suggestions = new();
+    private bool showSuggestions = false;
+
+    protected override void OnInitialized()
+    {
+        // Load existing tags for autocomplete
+        try 
+        {
+            allTags = JournalService.GetAllTags();
+        }
+        catch { /* Handle loading error gracefully */ }
+    }
+
+    private void HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" || e.Key == ",")
+        {
+            AddCurrentInput();
+        }
+    }
+
+    private void AddCurrentInput()
+    {
+        if (string.IsNullOrWhiteSpace(currentInput)) return;
+
+        var cleanTag = currentInput.Trim().Trim(',').Trim();
+        if (!string.IsNullOrEmpty(cleanTag) && !Tags.Contains(cleanTag, StringComparer.OrdinalIgnoreCase))
+        {
+            Tags.Add(cleanTag);
+            TagsChanged.InvokeAsync(Tags);
+        }
+
+        currentInput = "";
+        showSuggestions = false;
+    }
+
+    private void RemoveTag(string tag)
+    {
+        Tags.Remove(tag);
+        TagsChanged.InvokeAsync(Tags);
+    }
+
+    private void SelectSuggestion(string suggestion)
+    {
+        currentInput = suggestion;
+        AddCurrentInput();
+    }
+}
+
+<style>
+    .tag-input-container {
+        position: relative;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 8px;
+        padding: 4px;
+        background: var(--bg-surface, white);
+        min-height: 42px;
+    }
+
+    .tags-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+    }
+
+    .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        background: var(--primary-light, #ebf8ff);
+        color: var(--primary-color, #3182ce);
+        padding: 4px 8px;
+        border-radius: 16px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .remove-tag {
+        background: none;
+        border: none;
+        color: currentColor;
+        margin-left: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        padding: 0;
+        opacity: 0.6;
+    }
+
+    .remove-tag:hover {
+        opacity: 1;
+    }
+
+    .tag-input {
+        border: none;
+        outline: none;
+        flex: 1;
+        min-width: 80px;
+        padding: 6px;
+        font-size: 14px;
+        background: transparent;
+        color: var(--text-primary, #2d3748);
+    }
+
+    .suggestions-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 6px;
+        margin-top: 4px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 10;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .suggestion-item {
+        padding: 8px 12px;
+        cursor: pointer;
+    }
+
+    .suggestion-item:hover {
+        background: var(--bg-hover, #edf2f7);
+    }
+</style>

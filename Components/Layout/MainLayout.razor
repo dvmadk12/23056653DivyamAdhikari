@@ -1,0 +1,107 @@
+﻿@inherits LayoutComponentBase
+@inject JUpdate.Services.ThemeService ThemeService
+@inject JUpdate.Services.AuthService AuthService
+@implements IDisposable
+
+<div class="main-layout @ThemeService.CurrentTheme">
+    @if (!string.IsNullOrEmpty(StartupError))
+    {
+        <div class="alert alert-danger" style="padding: 20px; background: #ffe6e6; color: #dc3545;">
+            <h3>Startup Error</h3>
+            <p>@StartupError</p>
+        </div>
+    }
+    @if (AuthService.IsAuthenticated)
+    {
+        <div class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="32" height="32" rx="6" fill="#7C3AED"/>
+                        <path d="M10 12h12v2H10v-2zm0 3h12v2H10v-2zm0 3h8v2H10v-2z" fill="white"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-name">MyJournal</div>
+                    <div class="brand-subtitle">Desktop Edition</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <NavLink href="/dashboard" class="nav-link" Match="NavLinkMatch.Prefix">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                    </svg>
+                    <span>Dashboard</span>
+                </NavLink>
+                <NavLink href="/calendar" class="nav-link">
+                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    <span>Calendar</span>
+                </NavLink>
+                <NavLink href="/new-entry" class="nav-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"/>
+                    </svg>
+                    <span>New Entry</span>
+                </NavLink>
+                <NavLink href="/entries" class="nav-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>All Entries</span>
+                </NavLink>
+                <NavLink href="/tags" class="nav-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Tags</span>
+                </NavLink>
+                <NavLink href="/mood-tracker" class="nav-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-.464 5.535a1 1 0 10-1.415-1.414 3 3 0 01-4.242 0 1 1 0 00-1.415 1.414 5 5 0 007.072 0z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Mood Tracker</span>
+                </NavLink>
+
+                <div class="nav-divider"></div>
+
+                <NavLink href="/settings" class="nav-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Settings</span>
+                </NavLink>
+            </nav>
+        </div>
+    }
+
+    <main class="@(AuthService.IsAuthenticated ? "main-content" : "main-content-full")">
+        @Body
+    </main>
+</div>
+
+@code {
+    public string? StartupError { get; set; }
+
+    protected override void OnInitialized()
+    {
+        try
+        {
+            ThemeService.LoadTheme();
+        }
+        catch (Exception ex)
+        {
+            StartupError = $"Theme Load Error: {ex.Message} \n {ex.StackTrace}";
+        }
+    }
+
+    public void Dispose()
+    {
+        // Cleanup if needed
+    }
+}

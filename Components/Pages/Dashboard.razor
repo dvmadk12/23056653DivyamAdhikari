@@ -1,0 +1,228 @@
+@page "/dashboard"
+@inject JUpdate.Services.AnalyticsService AnalyticsService
+@inject JUpdate.Services.DatabaseService DbService
+@inject JUpdate.Services.AuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+@if (!AuthService.IsAuthenticated)
+{
+    <RedirectToLogin />
+}
+else
+{
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="margin: 20px; padding: 15px; background: #fff5f5; border: 1px solid #fc8181; color: #c53030; border-radius: 8px;">
+            <p><strong>Dashboard Error:</strong> @errorMessage</p>
+            <button class="btn btn-sm btn-outline-danger" @onclick="LoadAnalytics">Retry</button>
+        </div>
+    }
+
+    <div class="dashboard-container">
+        <!-- Top Header -->
+        <div class="dashboard-header">
+            <div class="header-left">
+                <h1 class="page-title">Dashboard</h1>
+                <p class="page-subtitle">Track your journaling journey</p>
+            </div>
+            <div class="header-right">
+                <button class="btn-new-entry" @onclick='() => Navigation.NavigateTo("/new-entry")'>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 3v10M3 8h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    New Entry
+                </button>
+                <div class="profile-picture">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <circle cx="16" cy="16" r="16" fill="#E2E8F0"/>
+                        <circle cx="16" cy="12" r="5" fill="#4A5568"/>
+                        <path d="M6 26c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#4A5568"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Cards -->
+        <div class="dashboard-content">
+            <!-- Row 1: Streak Information -->
+            <div class="cards-row">
+                <div class="analytics-card streak-card">
+                    <div class="card-icon fire-icon">🔥</div>
+                    <h3 class="card-title">Current Streak</h3>
+                    <div class="card-value">@currentStreak</div>
+                    <p class="card-description">days in a row</p>
+                    <p class="card-encouragement">Keep it going!</p>
+                    <div class="streak-progress">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M6 2L8 5H11L9 7.5L10 11L6 9L2 11L3 7.5L1 5H4L6 2Z" fill="#22C55E"/>
+                        </svg>
+                        <span>+3 from last week</span>
+                    </div>
+                </div>
+
+                <div class="analytics-card streak-card">
+                    <div class="card-icon trophy-icon">🏆</div>
+                    <h3 class="card-title">Longest Streak</h3>
+                    <div class="card-value">@longestStreak</div>
+                    <p class="card-description">days achieved</p>
+                    <p class="card-note">Personal best</p>
+                    <p class="card-date">@(longestStreakDate?.ToString("MMM yyyy") ?? "N/A")</p>
+                </div>
+            </div>
+
+            <!-- Row 2: Mood Distribution and Tags -->
+            <div class="cards-row">
+                <div class="analytics-card chart-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Mood Distribution</h3>
+                        <span class="card-timeframe">Last 30 days</span>
+                        <button class="card-options">⋮</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="moodChart" width="300" height="300"></canvas>
+                    </div>
+                    <div class="mood-legend">
+                        @foreach (var mood in moodDistribution)
+                        {
+                            <div class="legend-item">
+                                <div class="legend-color" style="background-color: @GetMoodColor(mood.Key)"></div>
+                                <span>@mood.Key: @mood.Value%</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="analytics-card tags-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Most Used Tags</h3>
+                        <span class="card-timeframe">Top 8 this month</span>
+                        <button class="card-options">⋮</button>
+                    </div>
+                    <div class="tags-list">
+                        @foreach (var tag in mostUsedTags)
+                        {
+                            <div class="tag-item">
+                                <div class="tag-dot" style="background-color: @GetTagColor(tag.Key)"></div>
+                                <span class="tag-name">@tag.Key</span>
+                                <span class="tag-count">@tag.Value</span>
+                            </div>
+                        }
+                        @if (mostUsedTags.Count == 0)
+                        {
+                            <p class="no-data">No tags yet. Start tagging your entries!</p>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Row 3: Additional Analytics -->
+            <div class="cards-row">
+                <div class="analytics-card word-count-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Word Count Trends</h3>
+                        <span class="card-timeframe">Average words per entry</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="wordCountChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private int currentStreak = 0;
+    private int longestStreak = 0;
+    private DateTime? longestStreakDate = null;
+    private Dictionary<string, int> moodDistribution = new();
+    private Dictionary<string, int> mostUsedTags = new();
+    private Dictionary<string, double> wordCountTrends = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAnalytics();
+    }
+
+    private async Task LoadAnalytics()
+    {
+        try
+        {
+            errorMessage = null;
+            currentStreak = AnalyticsService.GetCurrentStreak();
+            longestStreak = AnalyticsService.GetLongestStreak();
+            
+            var thirtyDaysAgo = DateTime.Today.AddDays(-30);
+            moodDistribution = CalculateMoodPercentages(AnalyticsService.GetMoodDistribution(thirtyDaysAgo, DateTime.Today));
+            
+            var thisMonthStart = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            mostUsedTags = AnalyticsService.GetMostUsedTags(8, thisMonthStart, DateTime.Today);
+            
+            wordCountTrends = AnalyticsService.GetWordCountTrends(DateTime.Today.AddMonths(-6), DateTime.Today);
+            
+            await Task.Delay(100); // Allow UI to render
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            Console.WriteLine($"Dashboard Load Error: {ex}");
+        }
+    }
+
+    private Dictionary<string, int> CalculateMoodPercentages(Dictionary<string, int> distribution)
+    {
+        var total = distribution.Values.Sum();
+        if (total == 0) return new Dictionary<string, int>();
+
+        return distribution.ToDictionary(
+            kvp => kvp.Key,
+            kvp => (int)Math.Round((double)kvp.Value / total * 100)
+        );
+    }
+
+    private string GetMoodColor(string mood)
+    {
+        return mood switch
+        {
+            "Positive" => "#22C55E",
+            "Neutral" => "#94A3B8",
+            "Negative" => "#EF4444",
+            _ => "#E2E8F0"
+        };
+    }
+
+    private string GetTagColor(string tag)
+    {
+        var colors = new[] { "#A855F7", "#7C3AED", "#EC4899", "#22C55E", "#3B82F6", "#F97316", "#14B8A6", "#EF4444" };
+        var index = Math.Abs(tag.GetHashCode()) % colors.Length;
+        return colors[index];
+    }
+
+    private async Task DrawCharts()
+    {
+        try
+        {
+            // Draw mood distribution pie chart
+            var moodChartData = moodDistribution.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+            await JSRuntime.InvokeVoidAsync("drawMoodChart", "moodChart", moodChartData);
+
+            // Draw word count trends line chart
+            await JSRuntime.InvokeVoidAsync("drawWordCountChart", "wordCountChart", wordCountTrends);
+        }
+        catch (Exception)
+        {
+            // Charts will be drawn when JS is ready
+        }
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        // Cleanup if needed
+        await Task.CompletedTask;
+    }
+}
+
