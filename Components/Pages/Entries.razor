@@ -6,8 +6,49 @@
 
 <div class="entries-page">
     <div class="page-header">
-        <h1>All Entries</h1>
-        <p>A complete history of your thoughts</p>
+        <div class="header-content">
+            <div>
+                <h1>All Entries</h1>
+                <p>A complete history of your thoughts</p>
+            </div>
+            <button class="btn-secondary export-btn" @onclick="ExportToPdf">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+        <div class="search-input-wrapper">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input 
+                type="text" 
+                class="search-input" 
+                placeholder="Search by title or tags..." 
+                value="@searchQuery"
+                @oninput="OnSearchInput" />
+            @if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                <button class="clear-search-btn" @onclick="ClearSearch">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            <p class="search-results-text">@filteredEntries.Count result(s) found</p>
+        }
     </div>
 
     @if (allEntries == null)
@@ -31,7 +72,7 @@
     else
     {
         <div class="entries-timeline">
-            @foreach (var group in groupedEntries)
+            @foreach (var group in filteredGroupedEntries)
             {
                 <div class="month-group">
                     <h2 class="month-header">@group.Key</h2>
@@ -74,8 +115,11 @@
 
 @code {
     private List<JournalEntry> allEntries = new();
+    private List<JournalEntry> filteredEntries = new();
     private Dictionary<string, List<JournalEntry>> groupedEntries = new();
+    private Dictionary<string, List<JournalEntry>> filteredGroupedEntries = new();
     private List<Mood> moods = new();
+    private string searchQuery = "";
 
     protected override void OnInitialized()
     {
@@ -86,11 +130,48 @@
     {
         allEntries = JournalService.GetAllEntries() ?? new List<JournalEntry>();
         moods = JournalService.GetMoods();
+        filteredEntries = allEntries;
 
         // Group by Month Year (e.g., "January 2024")
         groupedEntries = allEntries
             .GroupBy(e => e.EntryDate.ToString("MMMM yyyy"))
             .ToDictionary(g => g.Key, g => g.ToList());
+        
+        filteredGroupedEntries = groupedEntries;
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        FilterEntries();
+    }
+
+    private void FilterEntries()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            filteredEntries = allEntries;
+            filteredGroupedEntries = groupedEntries;
+        }
+        else
+        {
+            var query = searchQuery.ToLower();
+            filteredEntries = allEntries
+                .Where(e => 
+                    e.Title.ToLower().Contains(query) || 
+                    (e.Tags != null && e.Tags.ToLower().Contains(query)))
+                .ToList();
+            
+            filteredGroupedEntries = filteredEntries
+                .GroupBy(e => e.EntryDate.ToString("MMMM yyyy"))
+                .ToDictionary(g => g.Key, g => g.ToList());
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchQuery = "";
+        FilterEntries();
     }
 
     private void NavigateToEntry(int id)
@@ -108,34 +189,175 @@
         var mood = moods.FirstOrDefault(m => m.Id == moodId);
         return mood?.Emoji ?? "📝";
     }
+
+    [Inject] private PdfExportService PdfExportService { get; set; } = default!;
+
+    private async Task ExportToPdf()
+    {
+        if (allEntries == null || !allEntries.Any())
+        {
+            await App.Current.MainPage.DisplayAlert("No Entries", "There are no entries to export.", "OK");
+            return;
+        }
+
+        try
+        {
+            var pdfBytes = PdfExportService.GeneratePdf(allEntries);
+            var fileName = $"Journal_Export_{DateTime.Now:yyyyMMdd_HHmm}.pdf";
+            var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
+
+            File.WriteAllBytes(filePath, pdfBytes);
+
+            await Share.Default.RequestAsync(new ShareFileRequest
+            {
+                Title = "Export Journal",
+                File = new ShareFile(filePath)
+            });
+        }
+        catch (Exception ex)
+        {
+            await App.Current.MainPage.DisplayAlert("Error", $"Failed to export PDF: {ex.Message}", "OK");
+        }
+    }
 }
 
 <style>
+    :root {
+        --bg-grid: #1a1a1a;
+        --bg-paper: #2b2b2b;
+        --text-chalk: #f0f0f0;
+        --tape-color: #d4c5a3;
+        --accent-purple: #a78bfa;
+        --accent-green: #4ade80;
+    }
+
     .entries-page {
         padding: 24px;
-        max-width: 800px;
-        margin: 0 auto;
+        min-height: 100vh;
+        background-color: #111;
+        background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 20px 20px;
+        color: var(--text-chalk);
     }
 
     .page-header {
-        margin-bottom: 40px;
+        margin-bottom: 24px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
     }
 
     .page-header h1 {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: 700;
-        color: var(--text-primary);
+        color: white;
         margin-bottom: 8px;
+        text-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
 
     .page-header p {
-        color: var(--text-secondary);
+        color: #888;
+        font-style: italic;
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+
+    .export-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        background: #2d2d2d;
+        border: 1px solid #444;
+        color: #aaa;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .export-btn:hover {
+        background: #3d3d3d;
+        color: white;
+        border-color: #666;
+    }
+
+    /* Search Bar */
+    .search-container {
+        max-width: 800px;
+        margin: 0 auto 32px;
+    }
+
+    .search-input-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 16px;
+        color: #888;
+        pointer-events: none;
+    }
+
+    .search-input {
+        width: 100%;
+        padding: 12px 16px 12px 48px;
+        background: var(--bg-paper);
+        border: 1px solid #444;
+        border-radius: 12px;
+        color: var(--text-chalk);
+        font-size: 1rem;
+        transition: all 0.2s;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: var(--accent-purple);
+        box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.1);
+    }
+
+    .search-input::placeholder {
+        color: #666;
+    }
+
+    .clear-search-btn {
+        position: absolute;
+        right: 12px;
+        background: transparent;
+        border: none;
+        color: #888;
+        cursor: pointer;
+        padding: 4px;
+        display: flex;
+        align-items: center;
+        border-radius: 4px;
+        transition: all 0.2s;
+    }
+
+    .clear-search-btn:hover {
+        background: #3d3d3d;
+        color: white;
+    }
+
+    .search-results-text {
+        margin-top: 8px;
+        color: #888;
+        font-size: 0.9rem;
+        font-style: italic;
     }
 
     .empty-state {
         text-align: center;
         padding: 60px 20px;
-        color: var(--text-secondary);
+        color: #666;
     }
 
     .empty-state svg {
@@ -143,23 +365,44 @@
         opacity: 0.5;
     }
 
-    .empty-state button {
-        margin-top: 20px;
+    .empty-state p {
+        font-size: 1.1rem;
+        margin-bottom: 24px;
+        color: #888;
+    }
+
+    .entries-timeline {
+        max-width: 800px;
+        margin: 0 auto;
     }
 
     .month-group {
-        margin-bottom: 40px;
+        margin-bottom: 48px;
     }
 
     .month-header {
-        font-size: 1.1rem;
+        font-size: 1.5rem;
         font-weight: 600;
-        color: var(--text-secondary);
-        margin-bottom: 16px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid var(--border-color);
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        color: white;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px dashed #444;
+        position: relative;
+    }
+
+    .month-header::before {
+        content: '';
+        position: absolute;
+        background-color: var(--tape-color);
+        opacity: 0.8;
+        height: 30px;
+        width: 100px;
+        top: -5px;
+        left: 50%;
+        transform: translateX(-50%) rotate(-1deg);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        clip-path: polygon(2% 0%, 98% 2%, 100% 98%, 0% 100%);
+        z-index: -1;
     }
 
     .entries-list {
@@ -169,19 +412,19 @@
     }
 
     .entry-card {
-        display: flex;
-        gap: 20px;
+        background: var(--bg-paper);
         padding: 20px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
         border-radius: 12px;
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid var(--accent-purple);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
 
     .entry-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        background: #333;
     }
 
     .entry-date-col {

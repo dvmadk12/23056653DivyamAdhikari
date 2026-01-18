@@ -39,6 +39,21 @@ namespace JUpdate.Services
             return _databaseService.GetAllTags();
         }
 
+        public List<string> GetInbuiltTags()
+        {
+            return new List<string> 
+            { 
+                "Personal", 
+                "Work", 
+                "Ideas", 
+                "Gratitude", 
+                "Health", 
+                "Reflection", 
+                "Family",
+                "Travel"
+            };
+        }
+
         public List<Mood> GetMoods()
         {
             return _databaseService.GetAllMoods();

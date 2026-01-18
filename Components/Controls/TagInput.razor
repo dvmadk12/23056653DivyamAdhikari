@@ -30,6 +30,20 @@
             }
         </div>
     }
+
+    @if (suggestedTags.Any())
+    {
+        <div class="suggested-tags-area">
+            <span class="suggested-label">Suggested:</span>
+            @foreach (var tag in suggestedTags)
+            {
+                if (!Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                {
+                    <button class="suggested-chip" @onclick="() => AddTag(tag)">+ @tag</button>
+                }
+            }
+        </div>
+    }
 </div>
 
 @code {
@@ -39,6 +53,7 @@
     private string currentInput = "";
     private List<string> allTags = new();
     private List<string> suggestions = new();
+    private List<string> suggestedTags = new();
     private bool showSuggestions = false;
 
     protected override void OnInitialized()
@@ -47,6 +62,7 @@
         try 
         {
             allTags = JournalService.GetAllTags();
+            suggestedTags = JournalService.GetInbuiltTags();
         }
         catch { /* Handle loading error gracefully */ }
     }
@@ -84,6 +100,15 @@
     {
         currentInput = suggestion;
         AddCurrentInput();
+    }
+
+    private void AddTag(string tag)
+    {
+        if (!string.IsNullOrEmpty(tag) && !Tags.Contains(tag, StringComparer.OrdinalIgnoreCase))
+        {
+            Tags.Add(tag);
+            TagsChanged.InvokeAsync(Tags);
+        }
     }
 }
 
@@ -164,5 +189,36 @@
 
     .suggestion-item:hover {
         background: var(--bg-hover, #edf2f7);
+    }
+    
+    .suggested-tags-area {
+        margin-top: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .suggested-label {
+        font-size: 12px;
+        color: var(--text-secondary, #718096);
+        width: 100%;
+        margin-bottom: 2px;
+    }
+    
+    .suggested-chip {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: var(--bg-hover, #edf2f7);
+        color: var(--text-secondary, #718096);
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .suggested-chip:hover {
+        background: var(--bg-surface, white);
+        border-color: var(--border-color, #e2e8f0);
+        color: var(--text-primary, #2d3748);
     }
 </style>

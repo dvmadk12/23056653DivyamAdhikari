@@ -27,6 +27,7 @@ namespace JUpdate
             builder.Services.AddScoped<JUpdate.Services.AuthService>();
             builder.Services.AddScoped<JUpdate.Services.ThemeService>();
             builder.Services.AddScoped<JUpdate.Services.AnalyticsService>();
+            builder.Services.AddScoped<JUpdate.Services.PdfExportService>();
 
             return builder.Build();
         }

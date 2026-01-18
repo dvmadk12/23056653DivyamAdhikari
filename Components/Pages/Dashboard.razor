@@ -23,109 +23,134 @@ else
     <div class="dashboard-container">
         <!-- Top Header -->
         <div class="dashboard-header">
-            <div class="header-left">
+            <div class="header-center">
+                <div class="logo-icon">📊</div>
                 <h1 class="page-title">Dashboard</h1>
-                <p class="page-subtitle">Track your journaling journey</p>
             </div>
-            <div class="header-right">
-                <button class="btn-new-entry" @onclick='() => Navigation.NavigateTo("/new-entry")'>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M8 3v10M3 8h10" stroke="white" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    New Entry
-                </button>
-                <div class="profile-picture">
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                        <circle cx="16" cy="16" r="16" fill="#E2E8F0"/>
-                        <circle cx="16" cy="12" r="5" fill="#4A5568"/>
-                        <path d="M6 26c0-5.5 4.5-10 10-10s10 4.5 10 10" fill="#4A5568"/>
-                    </svg>
-                </div>
-            </div>
+            <p class="page-subtitle">Your journaling insights & analytics</p>
         </div>
 
-        <!-- Analytics Cards -->
-        <div class="dashboard-content">
-            <!-- Row 1: Streak Information -->
-            <div class="cards-row">
-                <div class="analytics-card streak-card">
-                    <div class="card-icon fire-icon">🔥</div>
-                    <h3 class="card-title">Current Streak</h3>
-                    <div class="card-value">@currentStreak</div>
-                    <p class="card-description">days in a row</p>
-                    <p class="card-encouragement">Keep it going!</p>
-                    <div class="streak-progress">
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                            <path d="M6 2L8 5H11L9 7.5L10 11L6 9L2 11L3 7.5L1 5H4L6 2Z" fill="#22C55E"/>
-                        </svg>
-                        <span>+3 from last week</span>
-                    </div>
-                </div>
-
-                <div class="analytics-card streak-card">
-                    <div class="card-icon trophy-icon">🏆</div>
-                    <h3 class="card-title">Longest Streak</h3>
-                    <div class="card-value">@longestStreak</div>
-                    <p class="card-description">days achieved</p>
-                    <p class="card-note">Personal best</p>
-                    <p class="card-date">@(longestStreakDate?.ToString("MMM yyyy") ?? "N/A")</p>
+        <!-- Analytics Cards Grid (Bento Layout) -->
+        <div class="bento-grid">
+            <!-- Row 1: Key Stats -->
+            <div class="stat-card tape-top delayed-1">
+                <div class="stat-icon">📝</div>
+                <div class="stat-content">
+                     <span class="stat-value">6</span>
+                     <span class="stat-label">Total Entries</span>
                 </div>
             </div>
 
-            <!-- Row 2: Mood Distribution and Tags -->
-            <div class="cards-row">
-                <div class="analytics-card chart-card">
-                    <div class="card-header">
-                        <h3 class="card-title">Mood Distribution</h3>
-                        <span class="card-timeframe">Last 30 days</span>
-                        <button class="card-options">⋮</button>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="moodChart" width="300" height="300"></canvas>
-                    </div>
-                    <div class="mood-legend">
-                        @foreach (var mood in moodDistribution)
-                        {
-                            <div class="legend-item">
-                                <div class="legend-color" style="background-color: @GetMoodColor(mood.Key)"></div>
-                                <span>@mood.Key: @mood.Value%</span>
-                            </div>
-                        }
-                    </div>
+            <div class="stat-card tape-top delayed-2">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-content">
+                     <span class="stat-value">@currentStreak</span>
+                     <span class="stat-label">Current Streak</span>
                 </div>
+            </div>
 
-                <div class="analytics-card tags-card">
-                    <div class="card-header">
-                        <h3 class="card-title">Most Used Tags</h3>
-                        <span class="card-timeframe">Top 8 this month</span>
-                        <button class="card-options">⋮</button>
-                    </div>
-                    <div class="tags-list">
-                        @foreach (var tag in mostUsedTags)
-                        {
-                            <div class="tag-item">
-                                <div class="tag-dot" style="background-color: @GetTagColor(tag.Key)"></div>
-                                <span class="tag-name">@tag.Key</span>
-                                <span class="tag-count">@tag.Value</span>
+            <div class="stat-card tape-top delayed-3">
+                <div class="stat-icon">🏆</div>
+                <div class="stat-content">
+                     <span class="stat-value">@longestStreak</span>
+                     <span class="stat-label">Longest Streak</span>
+                </div>
+            </div>
+
+            <div class="stat-card tape-top delayed-4">
+                <div class="stat-icon">📖</div>
+                <div class="stat-content">
+                     <span class="stat-value">96</span> <!-- Placeholder or calc total words -->
+                     <span class="stat-label">Total Words</span>
+                </div>
+            </div>
+
+            <!-- Row 2: Charts & Details -->
+            <div class="bento-card large-card tape-corner-left">
+                <h3 class="card-header-text">😊 Mood Distribution</h3>
+                <div class="mood-list-visual">
+                    <!-- Custom visual bars instead of ChartJS for scrapbook feel -->
+                    @foreach (var mood in moodDistribution)
+                    {
+                        <div class="mood-bar-row">
+                            <span class="mood-icon">@GetMoodEmoji(mood.Key)</span>
+                            <span class="mood-label">@mood.Key</span>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: @mood.Value%; background-color: @GetMoodColor(mood.Key)"></div>
                             </div>
-                        }
-                        @if (mostUsedTags.Count == 0)
-                        {
-                            <p class="no-data">No tags yet. Start tagging your entries!</p>
-                        }
+                            <span class="mood-percent">@mood.Value%</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="bento-card medium-card tape-top-center">
+                <h3 class="card-header-text">📈 Mood Categories</h3>
+                <div class="chart-container-circle">
+                    <!-- We can keep Canvas or use CSS circles. Let's keep Canvas for functionality but style container -->
+                    <canvas id="moodChart" width="200" height="200"></canvas>
+                </div>
+                <div class="mini-legend">
+                    <span class="legend-dot pos"></span> Positive
+                    <span class="legend-dot neu"></span> Neutral
+                    <span class="legend-dot neg"></span> Negative
+                </div>
+            </div>
+
+            <div class="bento-card medium-card tape-corner-right">
+                <h3 class="card-header-text">🏷️ Most Used Tags</h3>
+                <div class="tags-cloud">
+                     @foreach (var tag in mostUsedTags)
+                     {
+                         <div class="dashed-tag" style="border-color: @GetTagColor(tag.Key)">
+                             <span class="tag-text">@tag.Key</span>
+                             <span class="tag-count-badge" style="background-color: @GetTagColor(tag.Key)">@tag.Value</span>
+                         </div>
+                     }
+                </div>
+            </div>
+
+            <!-- Row 3 -->
+            <div class="bento-card wide-card tape-top">
+                <h3 class="card-header-text">📝 Word Count Trends</h3>
+                <div class="stats-row">
+                    <div class="stat-mini">
+                        <span class="stat-mini-val">16</span>
+                        <span class="stat-mini-label">Avg. Words</span>
+                    </div>
+                    <div class="stat-mini">
+                        <span class="stat-mini-val">35</span>
+                        <span class="stat-mini-label">Longest</span>
+                    </div>
+                     <div class="stat-mini">
+                        <span class="stat-mini-val">1</span>
+                        <span class="stat-mini-label">Shortest</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Row 3: Additional Analytics -->
-            <div class="cards-row">
-                <div class="analytics-card word-count-card">
-                    <div class="card-header">
-                        <h3 class="card-title">Word Count Trends</h3>
-                        <span class="card-timeframe">Average words per entry</span>
+            <div class="bento-card medium-card tape-top">
+                <h3 class="card-header-text">📅 This Month</h3>
+                <div class="big-stats-grid">
+                    <div class="big-stat">
+                        <span class="big-num">4</span>
+                        <span class="big-lbl">Entries</span>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="wordCountChart" width="400" height="200"></canvas>
+                     <div class="big-stat">
+                        <span class="big-num">12</span>
+                        <span class="big-lbl">Missed</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card medium-card tape-corner-left">
+                <h3 class="card-header-text">🕐 Recent Moods</h3>
+                <div class="recent-mood-row">
+                    <!-- Placeholder specific recent data -->
+                    <div class="recent-mood-item">
+                        <span class="rm-date">Jun 15</span>
+                        <span class="rm-emoji">😐</span>
+                        <span class="rm-label">Calm</span>
                     </div>
                 </div>
             </div>
@@ -194,6 +219,21 @@ else
         };
     }
 
+    private string GetMoodEmoji(string mood)
+    {
+        return mood switch
+        {
+            "Happy" => "😊",
+            "Sad" => "😔",
+            "Angry" => "😠",
+            "Calm" => "😐",
+            "Grateful" => "🙏",
+            "Excited" => "🤩",
+            "Tired" => "😴",
+            _ => "😐"
+        };
+    }
+
     private string GetTagColor(string tag)
     {
         var colors = new[] { "#A855F7", "#7C3AED", "#EC4899", "#22C55E", "#3B82F6", "#F97316", "#14B8A6", "#EF4444" };
@@ -225,4 +265,266 @@ else
         await Task.CompletedTask;
     }
 }
+
+<style>
+    /* Dark Scrapbook Theme */
+    :root {
+        --bg-grid: #1a1a1a;
+        --bg-paper: #2b2b2b;
+        --text-chalk: #f0f0f0;
+        --tape-color: #d4c5a3;
+    }
+
+    .dashboard-container {
+        padding: 24px;
+        min-height: 100vh;
+        background-color: #111;
+        background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 20px 20px;
+        color: var(--text-chalk);
+        font-family: 'Segoe UI', cursive;
+    }
+
+    .dashboard-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+
+    .header-center {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .logo-icon {
+        font-size: 2rem;
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        margin: 0;
+        text-shadow: 0 0 10px rgba(255,255,255,0.1);
+    }
+
+    .page-subtitle {
+        color: #888;
+        font-style: italic;
+        margin-top: 5px;
+    }
+
+    /* Bento Grid */
+    .bento-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        grid-auto-rows: minmax(100px, auto);
+        gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Cards */
+    .stat-card, .bento-card {
+        background: var(--bg-paper);
+        border-radius: 4px;
+        position: relative;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s;
+    }
+
+    .stat-card:hover, .bento-card:hover {
+        transform: translateY(-3px) rotate(0.5deg);
+        z-index: 5;
+    }
+
+    /* Tape Effect */
+    [class*="tape-"]::before {
+        content: '';
+        position: absolute;
+        background-color: var(--tape-color);
+        opacity: 0.8;
+        height: 30px;
+        width: 100px;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%) rotate(-2deg);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        z-index: 10;
+        /* Simplified css shape for tape */
+        clip-path: polygon(2% 0%, 98% 2%, 100% 98%, 0% 100%);
+    }
+
+    .tape-corner-left::before {
+        top: 10px;
+        left: -15px;
+        width: 80px;
+        transform: rotate(-45deg);
+    }
+
+    .tape-corner-right::before {
+        top: 10px;
+        left: auto;
+        right: -15px;
+        width: 80px;
+        transform: rotate(45deg);
+    }
+
+    /* Content Styling */
+    .stat-card {
+        flex-direction: row;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+    }
+
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #aaa;
+        font-family: 'Courier New', monospace;
+    }
+
+    .bento-card h3 {
+        font-size: 1.5rem;
+        margin-top: 0;
+        margin-bottom: 20px;
+        border-bottom: 1px dashed #555;
+        padding-bottom: 8px;
+    }
+
+    /* Grid Spans */
+    .large-card { grid-column: span 2; grid-row: span 2; }
+    .medium-card { grid-column: span 1; grid-row: span 2; }
+    .wide-card { grid-column: span 2; }
+    
+    /* Charts */
+    .mood-list-visual {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .mood-bar-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .progress-track {
+        flex: 1;
+        height: 8px;
+        background: #444;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+    }
+
+    /* Tag Cloud */
+    .tags-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .dashed-tag {
+        border: 2px dashed;
+        padding: 5px 10px;
+        border-radius: 8px;
+        background: rgba(255,255,255,0.05);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .tag-count-badge {
+        font-size: 0.8rem;
+        padding: 2px 6px;
+        border-radius: 50%;
+        color: white;
+        font-weight: bold;
+    }
+
+    /* Big Stats */
+    .big-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        text-align: center;
+        height: 100%;
+        align-items: center;
+    }
+
+    .big-stat {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .big-num {
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+
+    .recent-mood-item {
+        background: #222;
+        padding: 10px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Animations */
+    .delayed-1 { animation: fadeIn 0.5s ease 0.1s forwards; opacity: 0; }
+    .delayed-2 { animation: fadeIn 0.5s ease 0.2s forwards; opacity: 0; }
+    .delayed-3 { animation: fadeIn 0.5s ease 0.3s forwards; opacity: 0; }
+    .delayed-4 { animation: fadeIn 0.5s ease 0.4s forwards; opacity: 0; }
+
+    @@keyframes fadeIn {
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @@media (max-width: 900px) {
+        .bento-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @@media (max-width: 600px) {
+        .bento-grid {
+            grid-template-columns: 1fr;
+        }
+        .stat-card {
+            grid-column: span 1;
+        }
+        .large-card, .wide-card, .medium-card {
+            grid-column: span 1;
+            grid-row: auto;
+        }
+    }
+</style>
 
