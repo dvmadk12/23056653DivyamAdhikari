@@ -66,16 +66,33 @@
     {
         if (string.IsNullOrEmpty(markdown)) return string.Empty;
         
-        // Very basic markdown rendering for preview
-        // In a real app, use a library like Markdig
-        var html = System.Net.WebUtility.HtmlEncode(markdown)
-            .Replace("\n", "<br/>")
-            .Replace("**", "<b>").Replace("**", "</b>") // Naive replacement
-            .Replace("*", "<i>").Replace("*", "</i>");  // Naive replacement
-            
-        // For now, let's just return the text but preserve newlines
-        // A proper markdown library is recommended
-        return markdown.Replace("\n", "<br/>");
+        // Escape HTML first
+        var html = System.Net.WebUtility.HtmlEncode(markdown);
+        
+        // Handle bold-italic first (***text***)
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*\*(.+?)\*\*\*", "<strong><em>$1</em></strong>");
+        
+        // Handle bold (**text**)
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*\*(.+?)\*\*", "<strong>$1</strong>");
+        
+        // Handle italic (*text*)
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\*(.+?)\*", "<em>$1</em>");
+        
+        // Handle strikethrough (~~text~~)
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"~~(.+?)~~", "<del>$1</del>");
+        
+        // Handle headings
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^### (.+)$", "<h3>$1</h3>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^## (.+)$", "<h2>$1</h2>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^# (.+)$", "<h1>$1</h1>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        
+        // Handle lists
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"^- (.+)$", "<li>$1</li>", System.Text.RegularExpressions.RegexOptions.Multiline);
+        
+        // Handle line breaks
+        html = html.Replace("\r\n", "<br/>").Replace("\n", "<br/>");
+        
+        return html;
     }
 }
 

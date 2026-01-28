@@ -50,7 +50,29 @@ namespace JUpdate.Services
                 "Health", 
                 "Reflection", 
                 "Family",
-                "Travel"
+                "Travel",
+                "Goals",
+                "Memories",
+                "Dreams",
+                "Habits",
+                "Productivity",
+                "Mindfulness",
+                "Creativity",
+                "Learning",
+                "Relationships",
+                "Self-Care",
+                "Finance",
+                "Fitness",
+                "Career",
+                "Hobbies",
+                "Reading",
+                "Writing",
+                "Meditation",
+                "Adventure",
+                "Motivation",
+                "Achievement",
+                "Challenges",
+                "Inspiration"
             };
         }
 

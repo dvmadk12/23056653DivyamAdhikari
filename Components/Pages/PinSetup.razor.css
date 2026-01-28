@@ -1,154 +1,92 @@
-.login-container {
+.pin-setup-container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background-color: #F7F7F7;
     padding: 20px;
 }
 
-.login-content {
+.pin-setup-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 40px;
+    max-width: 450px;
     width: 100%;
-    max-width: 400px;
+}
+
+.pin-setup-header {
     text-align: center;
-    background-color: white;
-    border-radius: 12px;
-    padding: 48px 32px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
 }
 
-.login-header {
-    margin-bottom: 40px;
-}
-
-.app-icon {
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: center;
-}
-
-.app-title {
-    font-size: 32px;
+.setup-title {
+    font-size: 1.75rem;
     font-weight: bold;
-    color: #2D3748;
-    margin: 0 0 8px 0;
+    margin-bottom: 8px;
 }
 
-.app-tagline {
-    font-size: 14px;
-    color: #718096;
-    margin: 0;
+.setup-subtitle {
+    color: #6c757d;
+    font-size: 0.875rem;
 }
 
-.pin-section {
-    margin-bottom: 24px;
+.pin-form-group {
+    margin-bottom: 20px;
 }
 
-.pin-label {
+.pin-form-label {
     display: block;
-    text-align: left;
-    font-size: 14px;
+    margin-bottom: 8px;
     font-weight: 500;
-    color: #2D3748;
-    margin-bottom: 12px;
 }
 
-.pin-dots {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    margin-bottom: 16px;
-}
-
-.pin-dot {
-    width: 48px;
-    height: 48px;
-    border: 2px solid #C5D1C5;
-    border-radius: 50%;
-    background-color: white;
-    transition: all 0.2s;
-}
-
-.pin-dot.filled {
-    background-color: #4A5568;
-    border-color: #4A5568;
-}
-
-.pin-input-hidden {
-    position: absolute;
-    opacity: 0;
-    pointer-events: auto;
+.pin-form-input {
     width: 100%;
-    height: 100%;
-    left: 0;
-    top: 0;
-    border: none;
-    padding: 0;
-    margin: 0;
-    z-index: 10;
-    cursor: text;
-    font-size: 16px;
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
 }
 
-.pin-section {
+.pin-form-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.setup-button {
+    width: 100%;
+    padding: 12px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-weight: 600;
     cursor: pointer;
-    position: relative;
-    min-height: 120px;
+}
+
+.setup-button:hover {
+    background: #218838;
 }
 
 .error-message {
-    color: #E53E3E;
-    font-size: 14px;
-    margin-bottom: 16px;
-    min-height: 20px;
+    background: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #f5c6cb;
+    text-align: center;
 }
 
-.unlock-button {
-    width: 100%;
-    padding: 14px 24px;
-    background-color: #7C917C;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-bottom: 16px;
-    transition: background-color 0.2s;
+.pin-requirements {
+    background: #d1ecf1;
+    color: #0c5460;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border: 1px solid #bee5eb;
+    font-size: 0.875rem;
 }
-
-.unlock-button:hover:not(:disabled) {
-    background-color: #6B7F6B;
-}
-
-.unlock-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.forgot-pin-link {
-    display: block;
-    color: #4A5568;
-    font-size: 14px;
-    text-decoration: none;
-    margin-bottom: 32px;
-}
-
-.forgot-pin-link:hover {
-    color: #2D3748;
-    text-decoration: underline;
-}
-
-.login-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    color: #A0AEC0;
-    font-size: 12px;
-}
-

@@ -4,7 +4,7 @@
 @inject JournalService JournalService
 @inject NavigationManager Navigation
 
-<div class="entries-page">
+<div class="entries-page grid-bg">
     <div class="page-header">
         <div class="header-content">
             <div>
@@ -222,24 +222,30 @@
 }
 
 <style>
-    :root {
-        --bg-grid: #1a1a1a;
-        --bg-paper: #2b2b2b;
-        --text-chalk: #f0f0f0;
-        --tape-color: #d4c5a3;
-        --accent-purple: #a78bfa;
-        --accent-green: #4ade80;
-    }
-
     .entries-page {
         padding: 24px;
         min-height: 100vh;
-        background-color: #111;
-        background-image: 
-            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-        background-size: 20px 20px;
-        color: var(--text-chalk);
+        color: var(--text-primary);
+    }
+
+    .page-header {
+        margin-bottom: 24px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+        text-shadow: 0 0 10px rgba(100,100,100,0.05);
+    }
+
+    .page-header p {
+        color: var(--text-secondary);
+        font-style: italic;
     }
 
     .page-header {
@@ -274,18 +280,18 @@
         gap: 8px;
         padding: 8px 16px;
         font-size: 0.9rem;
-        background: #2d2d2d;
-        border: 1px solid #444;
-        color: #aaa;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
         border-radius: 8px;
         cursor: pointer;
         transition: all 0.2s;
     }
 
     .export-btn:hover {
-        background: #3d3d3d;
-        color: white;
-        border-color: #666;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        border-color: var(--accent-purple);
     }
 
     /* Search Bar */
@@ -303,17 +309,17 @@
     .search-icon {
         position: absolute;
         left: 16px;
-        color: #888;
+        color: var(--text-secondary);
         pointer-events: none;
     }
 
     .search-input {
         width: 100%;
         padding: 12px 16px 12px 48px;
-        background: var(--bg-paper);
-        border: 1px solid #444;
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
         border-radius: 12px;
-        color: var(--text-chalk);
+        color: var(--text-primary);
         font-size: 1rem;
         transition: all 0.2s;
     }
@@ -325,7 +331,8 @@
     }
 
     .search-input::placeholder {
-        color: #666;
+        color: var(--text-secondary);
+        opacity: 0.6;
     }
 
     .clear-search-btn {
@@ -333,7 +340,7 @@
         right: 12px;
         background: transparent;
         border: none;
-        color: #888;
+        color: var(--text-secondary);
         cursor: pointer;
         padding: 4px;
         display: flex;
@@ -343,13 +350,13 @@
     }
 
     .clear-search-btn:hover {
-        background: #3d3d3d;
-        color: white;
+        background: var(--bg-primary);
+        color: var(--text-primary);
     }
 
     .search-results-text {
         margin-top: 8px;
-        color: #888;
+        color: var(--text-secondary);
         font-size: 0.9rem;
         font-style: italic;
     }
@@ -357,7 +364,7 @@
     .empty-state {
         text-align: center;
         padding: 60px 20px;
-        color: #666;
+        color: var(--text-secondary);
     }
 
     .empty-state svg {
@@ -368,7 +375,7 @@
     .empty-state p {
         font-size: 1.1rem;
         margin-bottom: 24px;
-        color: #888;
+        color: var(--text-secondary);
     }
 
     .entries-timeline {
@@ -383,26 +390,11 @@
     .month-header {
         font-size: 1.5rem;
         font-weight: 600;
-        color: white;
+        color: var(--text-primary);
         margin-bottom: 20px;
         padding-bottom: 12px;
-        border-bottom: 2px dashed #444;
+        border-bottom: 2px dashed var(--border-color);
         position: relative;
-    }
-
-    .month-header::before {
-        content: '';
-        position: absolute;
-        background-color: var(--tape-color);
-        opacity: 0.8;
-        height: 30px;
-        width: 100px;
-        top: -5px;
-        left: 50%;
-        transform: translateX(-50%) rotate(-1deg);
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        clip-path: polygon(2% 0%, 98% 2%, 100% 98%, 0% 100%);
-        z-index: -1;
     }
 
     .entries-list {
@@ -412,19 +404,18 @@
     }
 
     .entry-card {
-        background: var(--bg-paper);
+        background: var(--bg-surface);
         padding: 20px;
         border-radius: 12px;
         cursor: pointer;
         transition: transform 0.2s, box-shadow 0.2s;
         border-left: 4px solid var(--accent-purple);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     .entry-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.4);
-        background: #333;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
 
     .entry-date-col {
@@ -439,7 +430,7 @@
     .day-number {
         font-size: 1.8rem;
         font-weight: 700;
-        color: var(--primary-color);
+        color: var(--accent-purple);
         line-height: 1;
     }
 
@@ -490,8 +481,9 @@
     .tag {
         font-size: 0.8rem;
         color: var(--text-secondary);
-        background: var(--bg-hover);
+        background: var(--bg-primary);
         padding: 2px 8px;
         border-radius: 12px;
+        border: 1px solid var(--border-color);
     }
 </style>

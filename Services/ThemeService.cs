@@ -7,7 +7,7 @@ namespace JUpdate.Services
     {
         private readonly DatabaseService _dbService;
         private readonly IJSRuntime _jsRuntime;
-        private string _currentTheme = "light";
+        private string _currentTheme = "dark";
         private bool _themeLoaded = false;
 
         public ThemeService(DatabaseService dbService, IJSRuntime jsRuntime)
@@ -33,7 +33,7 @@ namespace JUpdate.Services
             }
             catch
             {
-                _currentTheme = "light";
+                _currentTheme = "dark";
                 _themeLoaded = true;
             }
         }
@@ -62,4 +62,3 @@ namespace JUpdate.Services
         }
     }
 }
-

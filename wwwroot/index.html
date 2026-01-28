@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>JUpdate</title>
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
@@ -33,10 +35,8 @@
 
         // Initialize theme on page load
         window.addEventListener('DOMContentLoaded', () => {
-             // Retrieve theme from local storage or default to light, but the app handles it via ThemeService usually
-             // We can just rely on the C# side calling applyTheme, or auto-load here
-             const theme = localStorage.getItem('theme') || 'light';
-             window.applyTheme(theme);
+            const theme = localStorage.getItem('theme') || 'dark';
+            window.applyTheme(theme);
         });
     </script>
 

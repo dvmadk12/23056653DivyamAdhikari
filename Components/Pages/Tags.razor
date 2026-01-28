@@ -4,97 +4,67 @@
 @inject JournalService JournalService
 @inject NavigationManager Navigation
 
-<div class="tags-page">
+<div class="tags-page grid-bg">
     <div class="page-header">
-        <h1>Tags</h1>
-        <p>Explore your journal entries by tag</p>
+        <h1>Tag Library</h1>
+        <p>Browse and use these tags in your journal entries</p>
     </div>
 
-    <!-- Tag Cloud Section -->
-    <div class="tag-cloud-section">
-        @if (allTags == null)
-        {
-            <p>Loading tags...</p>
-        }
-        else if (!allTags.Any())
-        {
-            <div class="empty-state">
-                <p>No tags created yet. Add tags to your entries to see them here!</p>
-            </div>
-        }
-        else
-        {
-            <div class="tag-cloud">
-                @foreach (var tag in allTags)
-                {
-                    <button class="tag-chip @(selectedTag == tag ? "active" : "")" 
-                            @onclick="() => FilterByTag(tag)">
-                        <span class="hashtag">#</span>@tag
-                    </button>
-                }
-                @if (selectedTag != null)
-                {
-                    <button class="clear-filter" @onclick="ClearFilter">
-                        Clear Filter ✕
-                    </button>
-                }
-            </div>
-        }
-    </div>
-
-    <!-- Entries List Section -->
-    <div class="entries-section">
+    <!-- Predefined Tags Section -->
+    <div class="tags-section">
         <h2 class="section-title">
-            @(selectedTag == null ? "Recent Entries" : $"Entries tagged #{selectedTag}")
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            Suggested Tags
         </h2>
+        <div class="tag-grid">
+            @foreach (var tag in inbuiltTags)
+            {
+                <div class="tag-card" @onclick="() => CopyTagName(tag)">
+                    <span class="tag-name">#@tag</span>
+                    <span class="tag-hint">Click to copy</span>
+                </div>
+            }
+        </div>
+    </div>
 
-        @if (filteredEntries == null)
-        {
-            <p>Loading entries...</p>
-        }
-        else if (!filteredEntries.Any())
-        {
-            <div class="empty-entries">
-                <p>No entries found.</p>
-            </div>
-        }
-        else
-        {
-            <div class="entries-list">
-                @foreach (var entry in filteredEntries)
+    <!-- User Created Tags Section -->
+    @if (userTags.Any())
+    {
+        <div class="tags-section">
+            <h2 class="section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 8px;">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Your Tags (@userTags.Count)
+            </h2>
+            <div class="tag-grid">
+                @foreach (var tag in userTags)
                 {
-                    <div class="entry-card" @onclick="() => NavigateToEntry(entry.Id)">
-                        <div class="entry-date">
-                            <span class="day">@entry.EntryDate.ToString("dd")</span>
-                            <span class="month">@entry.EntryDate.ToString("MMM")</span>
-                        </div>
-                        <div class="entry-content">
-                            <h3 class="entry-title">@(string.IsNullOrEmpty(entry.Title) ? "Untitled Entry" : entry.Title)</h3>
-                            <div class="entry-preview">
-                                @(entry.Content.Length > 100 ? entry.Content.Substring(0, 100) + "..." : entry.Content)
-                            </div>
-                            <div class="entry-tags">
-                                @if (!string.IsNullOrEmpty(entry.Tags))
-                                {
-                                    @foreach (var t in entry.Tags.Split(','))
-                                    {
-                                        <span class="mini-tag">#@t.Trim()</span>
-                                    }
-                                }
-                            </div>
-                        </div>
+                    <div class="tag-card user-tag" @onclick="() => CopyTagName(tag)">
+                        <span class="tag-name">#@tag</span>
+                        <span class="tag-count">@GetTagUsageCount(tag) entries</span>
                     </div>
                 }
             </div>
-        }
-    </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(copyMessage))
+    {
+        <div class="toast-message">
+            @copyMessage
+        </div>
+    }
 </div>
 
 @code {
-    private List<string> allTags = new();
-    private List<JournalEntry> allEntries = new();
-    private List<JournalEntry> filteredEntries = new();
-    private string? selectedTag;
+    private List<string> inbuiltTags = new();
+    private List<string> userTags = new();
+    private Dictionary<string, int> tagUsage = new();
+    private string? copyMessage;
 
     protected override void OnInitialized()
     {
@@ -103,47 +73,65 @@
 
     private void LoadData()
     {
-        allTags = JournalService.GetAllTags();
-        allEntries = JournalService.GetAllEntries();
-        filteredEntries = allEntries;
-    }
-
-    private void FilterByTag(string tag)
-    {
-        if (selectedTag == tag)
-        {
-            ClearFilter();
-            return;
-        }
-
-        selectedTag = tag;
-        filteredEntries = allEntries
-            .Where(e => !string.IsNullOrEmpty(e.Tags) && 
-                       e.Tags.Split(',').Select(t => t.Trim()).Contains(tag))
+        inbuiltTags = JournalService.GetInbuiltTags();
+        var allUserTags = JournalService.GetAllTags();
+        
+        // Get user tags (exclude built-in tags)
+        userTags = allUserTags
+            .Where(t => !inbuiltTags.Contains(t, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(t => t)
             .ToList();
+
+        // Calculate tag usage
+        var entries = JournalService.GetAllEntries();
+        tagUsage = new Dictionary<string, int>();
+        
+        foreach (var entry in entries)
+        {
+            if (string.IsNullOrEmpty(entry.Tags)) continue;
+            
+            var tags = entry.Tags.Split(',')
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrEmpty(t));
+            
+            foreach (var tag in tags)
+            {
+                if (tagUsage.ContainsKey(tag))
+                    tagUsage[tag]++;
+                else
+                    tagUsage[tag] = 1;
+            }
+        }
     }
 
-    private void ClearFilter()
+    private int GetTagUsageCount(string tag)
     {
-        selectedTag = null;
-        filteredEntries = allEntries;
+        return tagUsage.ContainsKey(tag) ? tagUsage[tag] : 0;
     }
 
-    private void NavigateToEntry(int id)
+    private async void CopyTagName(string tag)
     {
-        Navigation.NavigateTo($"/entry/{id}");
+        // Note: In a real app, you'd use JSInterop to copy to clipboard
+        // For now, just show a message
+        copyMessage = $"Tag '#{tag}' ready to use!";
+        StateHasChanged();
+        
+        await Task.Delay(2000);
+        copyMessage = null;
+        StateHasChanged();
     }
 }
 
 <style>
     .tags-page {
         padding: 24px;
-        max-width: 800px;
+        max-width: 1000px;
         margin: 0 auto;
     }
 
     .page-header {
-        margin-bottom: 32px;
+        margin-bottom: 40px;
+        text-align: center;
     }
 
     .page-header h1 {
@@ -157,143 +145,106 @@
         color: var(--text-secondary);
     }
 
-    .tag-cloud {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 40px;
-    }
-
-    .tag-chip {
-        display: inline-flex;
-        align-items: center;
-        padding: 8px 16px;
-        border-radius: 20px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border-color);
-        color: var(--text-primary);
-        font-size: 0.95rem;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .tag-chip:hover {
-        background: var(--bg-hover);
-        transform: translateY(-1px);
-    }
-
-    .tag-chip.active {
-        background: var(--primary-color);
-        color: white;
-        border-color: var(--primary-color);
-    }
-
-    .hashtag {
-        opacity: 0.6;
-        margin-right: 4px;
-    }
-
-    .clear-filter {
-        display: inline-flex;
-        align-items: center;
-        padding: 8px 16px;
-        color: var(--text-secondary);
-        background: transparent;
-        border: none;
-        cursor: pointer;
-        font-size: 0.9rem;
-    }
-
-    .clear-filter:hover {
-        color: var(--primary-color);
-        text-decoration: underline;
+    .tags-section {
+        margin-bottom: 48px;
     }
 
     .section-title {
         font-size: 1.25rem;
+        font-weight: 600;
         color: var(--text-primary);
         margin-bottom: 20px;
-        border-bottom: 2px solid var(--border-color);
         padding-bottom: 10px;
-    }
-
-    .entries-list {
-        display: grid;
-        gap: 16px;
-    }
-
-    .entry-card {
+        border-bottom: 2px solid var(--border-color);
         display: flex;
-        gap: 16px;
-        padding: 16px;
+        align-items: center;
+    }
+
+    .tag-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+    }
+
+    .tag-card {
         background: var(--bg-surface);
-        border: 1px solid var(--border-color);
+        border: 2px solid var(--border-color);
         border-radius: 12px;
+        padding: 16px;
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .entry-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    }
-
-    .entry-date {
+        transition: all 0.2s;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-width: 60px;
-        padding-right: 16px;
-        border-right: 1px solid var(--border-color);
+        gap: 4px;
+        text-align: center;
     }
 
-    .entry-date .day {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
+    .tag-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--accent-purple);
+        box-shadow: 0 4px 12px rgba(167, 139, 250, 0.2);
     }
 
-    .entry-date .month {
-        font-size: 0.875rem;
-        text-transform: uppercase;
-        color: var(--text-secondary);
+    .tag-card.user-tag {
+        border-color: var(--accent-green);
+    }
+
+    .tag-card.user-tag:hover {
+        border-color: var(--accent-green);
+        box-shadow: 0 4px 12px rgba(74, 222, 128, 0.2);
+    }
+
+    .tag-name {
+        font-size: 1rem;
         font-weight: 600;
-    }
-
-    .entry-content {
-        flex: 1;
-        overflow: hidden;
-    }
-
-    .entry-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 6px;
         color: var(--text-primary);
     }
 
-    .entry-preview {
-        font-size: 0.95rem;
+    .tag-hint {
+        font-size: 0.75rem;
         color: var(--text-secondary);
-        margin-bottom: 10px;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        opacity: 0.7;
     }
 
-    .entry-tags {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
+    .tag-count {
+        font-size: 0.75rem;
+        color: var(--accent-green);
+        font-weight: 500;
     }
 
-    .mini-tag {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        background: var(--bg-hover);
-        padding: 2px 8px;
-        border-radius: 4px;
+    .toast-message {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: var(--accent-purple);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        animation: slideIn 0.3s ease;
+        z-index: 1000;
+    }
+
+    @@keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .tag-grid {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .tag-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
     }
 </style>

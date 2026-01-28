@@ -2,6 +2,7 @@
 @using JUpdate.Models
 @using JUpdate.Services
 @inject JournalService JournalService
+@inject PdfExportService PdfExportService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
@@ -19,6 +20,13 @@
                 </svg>
             </button>
             <div class="header-actions">
+                <button class="icon-btn" @onclick="ExportEntry" title="Export PDF">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
                 <button class="icon-btn" @onclick="EditEntry" title="Edit">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -111,6 +119,42 @@
         {
             JournalService.DeleteEntry(Id);
             Navigation.NavigateTo("/dashboard");
+        }
+    }
+
+    private async Task ExportEntry()
+    {
+        if (entry == null) return;
+
+        try
+        {
+            var pdfBytes = PdfExportService.GeneratePdf(entry);
+            
+            // Format: EntryTitle-ExportDate.pdf or Untitled-ExportDate.pdf
+            string cleanTitle = string.IsNullOrEmpty(entry.Title) ? "Untitled" : string.Join("", entry.Title.Split(Path.GetInvalidFileNameChars()));
+            string dateStr = DateTime.Now.ToString("yyyyMMdd");
+            string fileName = $"{cleanTitle}-{dateStr}.pdf";
+            
+            // Get Downloads folder path
+            string downloadsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+            string filePath = Path.Combine(downloadsPath, fileName);
+
+            // Ensure unique filename if exists
+            int count = 1;
+            while (File.Exists(filePath))
+            {
+                string tempName = $"{cleanTitle}-{dateStr} ({count}).pdf";
+                filePath = Path.Combine(downloadsPath, tempName);
+                count++;
+            }
+
+            await File.WriteAllBytesAsync(filePath, pdfBytes);
+            
+            await JSRuntime.InvokeVoidAsync("alert", $"Entry exported successfully to:\n{filePath}");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Failed to export PDF: {ex.Message}");
         }
     }
 

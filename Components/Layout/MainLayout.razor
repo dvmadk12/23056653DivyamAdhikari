@@ -80,7 +80,7 @@
         </div>
     }
 
-    <main class="@(AuthService.IsAuthenticated ? "main-content" : "main-content-full")">
+    <main class="@(AuthService.IsAuthenticated ? "main-content grid-bg" : "main-content-full")">
         @Body
     </main>
 </div>
@@ -96,7 +96,7 @@
         }
         catch (Exception ex)
         {
-            StartupError = $"Theme Load Error: {ex.Message} \n {ex.StackTrace}";
+            StartupError = $"Theme Load Error: {ex.Message}";
         }
     }
 
